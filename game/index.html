@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Neon Harbor — Port Solmar</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #14101f; font-family: 'Segoe UI', system-ui, sans-serif; color: #fff; }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .hidden { display: none !important; }
+
+  /* --- HUD --- */
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+  .panel { background: rgba(10, 10, 20, 0.62); border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 10px; backdrop-filter: blur(3px); }
+  #topLeft { position: absolute; top: 14px; left: 14px; padding: 10px 14px; min-width: 210px; }
+  #money { font-size: 26px; font-weight: 800; color: #7cff5e; letter-spacing: 0.5px; }
+  #healthRow { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  #healthBar { flex: 1; height: 12px; background: rgba(255,255,255,0.18); border-radius: 6px; overflow: hidden; }
+  #healthFill { height: 100%; width: 100%; background: #7cff5e; transition: width 0.2s; }
+  #healthText { font-size: 13px; font-weight: 700; width: 28px; text-align: right; }
+  #district { margin-top: 6px; font-size: 13px; color: #ffd9ec; letter-spacing: 1px; text-transform: uppercase; }
+  #topRight { position: absolute; top: 14px; right: 14px; padding: 8px 14px; text-align: right; }
+  #stars { font-size: 26px; letter-spacing: 3px; color: #888; }
+  #stars.hot { color: #ffe14d; text-shadow: 0 0 12px rgba(255, 46, 136, 0.9); animation: pulse 0.9s infinite alternate; }
+  @keyframes pulse { from { opacity: 0.75; } to { opacity: 1; } }
+  #wantedLabel { font-size: 11px; letter-spacing: 2px; color: #ffb3c8; }
+  #missionBox { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); padding: 10px 18px; max-width: 480px; text-align: center; }
+  #missionTitle { font-size: 17px; font-weight: 800; color: #ffe14d; }
+  #missionObjective { font-size: 13px; color: #e8e8f2; margin-top: 2px; }
+  #missionTimer { font-size: 13px; color: #00e5ff; font-weight: 700; margin-top: 2px; }
+  #minimapWrap { position: absolute; right: 14px; bottom: 14px; padding: 6px; }
+  #minimap { display: block; width: 190px; height: 190px; border-radius: 6px; }
+  #mapLabel { font-size: 11px; letter-spacing: 2px; color: #c8c8e0; text-align: center; margin-top: 4px; }
+  #speedo { position: absolute; right: 224px; bottom: 18px; font-size: 26px; font-weight: 800; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
+  #toast { position: absolute; left: 14px; bottom: 76px; max-width: 420px; font-size: 15px; font-weight: 600; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,0.9); white-space: pre-line; line-height: 1.5; }
+  #hint { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); font-size: 14px; font-weight: 600; color: #ffe14d; text-shadow: 0 1px 6px rgba(0,0,0,0.9); }
+  #controls { position: absolute; left: 14px; bottom: 14px; font-size: 12px; color: rgba(255,255,255,0.75); text-shadow: 0 1px 4px rgba(0,0,0,0.9); line-height: 1.6; }
+  #muteBtn { position: absolute; right: 14px; top: 96px; pointer-events: auto; background: rgba(10,10,20,0.62); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 13px; }
+
+  /* --- Overlays --- */
+  .overlay { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; background: linear-gradient(180deg, rgba(20,8,40,0.55), rgba(10,5,25,0.78)); }
+  .card { width: min(620px, 92vw); background: rgba(16, 10, 32, 0.92); border: 1px solid rgba(255, 46, 136, 0.45); border-radius: 16px; padding: 34px 40px; text-align: center; box-shadow: 0 0 60px rgba(255, 46, 136, 0.25); }
+  .card h1 { margin: 0; font-size: 54px; letter-spacing: 3px; color: #ff2e88; text-shadow: 0 0 24px rgba(255, 46, 136, 0.8), 0 0 60px rgba(0, 229, 255, 0.5); }
+  .card h2 { margin: 4px 0 0; font-size: 17px; letter-spacing: 6px; color: #00e5ff; text-transform: uppercase; font-weight: 600; }
+  .card p { font-size: 15px; line-height: 1.65; color: #e8e8f2; }
+  .card .keys { font-size: 13.5px; color: #c8c8e0; line-height: 1.9; text-align: left; display: inline-block; margin: 8px 0 4px; }
+  .card .keys b { color: #ffe14d; }
+  .btn { pointer-events: auto; display: inline-block; margin: 8px 6px 0; padding: 12px 28px; font-size: 17px; font-weight: 800; letter-spacing: 1px; color: #14101f; background: #ff2e88; border: none; border-radius: 10px; cursor: pointer; }
+  .btn:hover { background: #ff5aa5; }
+  .btn.secondary { background: #00e5ff; }
+  .btn.secondary:hover { background: #5ff0ff; }
+  .btn.ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.4); font-size: 14px; padding: 10px 20px; }
+  #overTitle { font-size: 54px; }
+  .small { font-size: 12.5px; color: #9a9ab0; margin-top: 14px; }
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="Neon Harbor: an open-world crime game in Port Solmar. Drive, steal cars, dodge the police and finish Marla's three jobs."></canvas>
+<p id="status" role="status" aria-live="polite"></p>
+
+<div id="hud" class="hidden">
+  <div id="topLeft" class="panel">
+    <div id="money">$0</div>
+    <div id="healthRow"><span>♥</span><div id="healthBar"><div id="healthFill"></div></div><span id="healthText">100</span></div>
+    <div id="district">Harbourfront</div>
+  </div>
+  <div id="topRight" class="panel">
+    <div id="stars">☆☆☆☆☆</div>
+    <div id="wantedLabel">WANTED</div>
+  </div>
+  <div id="missionBox" class="panel">
+    <div id="missionTitle">Job 1 — Harbor Courier</div>
+    <div id="missionObjective"></div>
+    <div id="missionTimer"></div>
+  </div>
+  <div id="minimapWrap" class="panel">
+    <canvas id="minimap"></canvas>
+    <div id="mapLabel">PORT SOLMAR</div>
+  </div>
+  <div id="speedo"></div>
+  <div id="toast"></div>
+  <div id="hint"></div>
+  <div id="controls">WASD move / drive · E enter car · F punch · Shift sprint<br>Space brake · drag mouse to look · P pause · C save · M mute</div>
+  <button id="muteBtn" type="button">🔊 Sound</button>
+</div>
+
+<div id="titleScreen" class="overlay">
+  <div class="card">
+    <h1>NEON HARBOR</h1>
+    <h2>Port Solmar</h2>
+    <p id="story"></p>
+    <p>Three jobs from fixer Marla Voss. Steal cars, outrun the harbour police, clear the docks — and earn your way out of Port Solmar.</p>
+    <div class="keys">
+      <b>WASD</b> move / drive &nbsp;·&nbsp; <b>E</b> steal &amp; enter car &nbsp;·&nbsp; <b>F</b> punch<br>
+      <b>Shift</b> sprint &nbsp;·&nbsp; <b>Space</b> brake &nbsp;·&nbsp; <b>drag mouse</b> look around<br>
+      <b>P</b> pause &nbsp;·&nbsp; <b>C</b> save &nbsp;·&nbsp; <b>M</b> mute
+    </div>
+    <br>
+    <button id="startBtn" class="btn" type="button">▶ START</button>
+    <button id="continueBtn" class="btn secondary hidden" type="button">↻ CONTINUE</button>
+    <p class="small">An original open-world crime game. All names, characters, places and story are invented. Runs fully offline — no network requests.</p>
+  </div>
+</div>
+
+<div id="pauseScreen" class="overlay hidden">
+  <div class="card">
+    <h1 style="font-size:40px">PAUSED</h1>
+    <p>Port Solmar waits for no one — except right now.</p>
+    <button id="resumeBtn" class="btn" type="button">RESUME</button>
+    <button id="saveBtn" class="btn secondary" type="button">SAVE GAME</button><br>
+    <button id="pauseRestartBtn" class="btn ghost" type="button">Restart story</button>
+    <button id="pauseTitleBtn" class="btn ghost" type="button">Quit to title</button>
+  </div>
+</div>
+
+<div id="overScreen" class="overlay hidden">
+  <div class="card">
+    <h1 id="overTitle">BUSTED!</h1>
+    <p id="overText"></p>
+    <button id="overRestartBtn" class="btn" type="button">↻ TRY AGAIN</button>
+    <button id="overTitleBtn" class="btn ghost" type="button">Back to title</button>
+  </div>
+</div>
+
+<script src="./vendor/three.min.js"></script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
